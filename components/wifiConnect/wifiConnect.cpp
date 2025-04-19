@@ -163,12 +163,12 @@ static void setStaticIp(esp_netif_t *netif) {
 }
 
 #ifdef CONFIG_WPS_ENABLED
-TimerHandle_t wpsTimer;
+static bool wpsActive = false;
+static TimerHandle_t wpsTimer;
 void wpsTimerCallback(TimerHandle_t xTimer) {
 	ESP_LOGI(TAG, "WPS Timeout");
 	ESP_ERROR_CHECK(esp_wifi_wps_disable());
 
-	// ESP_ERROR_CHECK(esp_wifi_connect());
 	connectStatus = CONNECTING;
 	s_retry_num = 0;
 	esp_wifi_connect();
@@ -239,6 +239,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 					ESP_ERROR_CHECK(esp_wifi_wps_disable());
 					ESP_ERROR_CHECK(esp_wifi_wps_enable(&wpsConfig));
 					ESP_ERROR_CHECK(esp_wifi_wps_start(0));
+					wpsActive = true;
 					startWpsTimer();
 				} else {
 					if (ap_idx < s_ap_creds_num) {
@@ -264,6 +265,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 			}
 			break;
 #ifdef CONFIG_WPS_ENABLED
+
 		case WIFI_EVENT_STA_WPS_ER_SUCCESS: {
 			ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_SUCCESS");
 			{
@@ -273,7 +275,8 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 					xTimerDelete(wpsTimer, 0);
 					wpsTimer = NULL;
 				}
-				if (evt) {
+				if (evt) { // never seen this ??
+
 					s_ap_creds_num = evt->ap_cred_cnt;
 					for (i = 0; i < s_ap_creds_num; i++) {
 						memcpy(wps_ap_creds[i].sta.ssid, evt->ap_cred[i].ssid, sizeof(evt->ap_cred[i].ssid));
@@ -282,12 +285,8 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 					/* If multiple AP credentials are received from WPS, connect with first one */
 					ESP_LOGI(TAG, "Connecting to SSID: %s, Passphrase: %s", wps_ap_creds[0].sta.ssid, wps_ap_creds[0].sta.password);
 					ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wps_ap_creds[0]));
-
-					memcpy((char *)wifiSettings.SSID, wps_ap_creds[0].sta.ssid, sizeof(wifiSettings.SSID));
-					memcpy((char *)wifiSettings.pwd, wps_ap_creds[0].sta.password, sizeof(wifiSettings.pwd));
-					saveSettings();
+					connectStatus = CONNECTED;
 				}
-
 				/*
 				 * If only one AP credential is received from WPS, there will be no event data and
 				 * esp_wifi_set_config() is already called by WPS modules for backward compatibility
@@ -336,25 +335,40 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 		ESP_LOGI(TAG, "IP_EVENT %d", (int)event_id);
 		switch (event_id) {
 		case IP_EVENT_STA_GOT_IP: {
-
 #ifdef CONFIG_WPS_ENABLED
+
 			if (wpsTimer != NULL) {
 				xTimerDelete(wpsTimer, 0);
 				wpsTimer = NULL;
 			}
+			if (wpsActive) { // else this is set in WPS_EVENT_STA_WPS_ER_SUCCESS
+				wifi_config_t config;
+				esp_err_t err = esp_wifi_get_config(WIFI_IF_STA, &config);
+				if (err == ESP_OK) {
+					ESP_LOGI(TAG, "WPS: SSID: %s, PW: %s\n", (char *)config.sta.ssid, (char *)config.sta.password);
+					memcpy((char *)wifiSettings.SSID, (char *)config.sta.ssid, sizeof(wifiSettings.SSID));
+					memcpy((char *)wifiSettings.pwd, (char *)config.sta.password, sizeof(wifiSettings.pwd));
+					saveSettings();
+				} else {
+					printf("Couldn't get config: %d\n", (int)err);
+				}
+				wpsActive = false;
+			}
 #endif
-
 			xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
 			ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
 			sprintf(myIpAddress, IPSTR, IP2STR(&event->ip_info.ip));
 			connectStatus = IP_RECEIVED;
-
-		} break;
+		}
+		break;
 		default:
 			break;
 		}
 		return;
 	}
+#ifndef CONFIG_WPS_ENABLED
+#ifdef CONFIG_SMARTCONFIG_ENABLED
+
 	/*******************************   Smartconfig EVENT  ********************************************************* */
 	if (event_base == SC_EVENT) {
 		ESP_LOGI(TAG, "SC_EVENT %d", (int)event_id);
@@ -409,7 +423,9 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 		default:
 			break;
 		} // end switch event_id
-	}
+	} // end if event_base == SC_EVENT
+#endif // CONFIG_SMARTCONFIG_ENABLED
+#endif // NOT CONFIG_WPS_ENABLED
 	return;
 } // end event_handler
 

@@ -1,10 +1,10 @@
+#include "driver/gpio.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <led_strip.h>
 #include <stdio.h>
-#include "driver/gpio.h"
-#include "nvs_flash.h"
-#include "esp_log.h"
 
 #include "settings.h"
 #include "wifiConnect.h"
@@ -14,7 +14,7 @@
 esp_err_t init_spiffs(void);
 
 #define LED_TYPE LED_STRIP_WS2812
-#define LED_GPIO GPIO_NUM_38 // GPIO_NUM_8
+#define LED_GPIO GPIO_NUM_48 // GPIO_NUM_8
 #define CONFIG_LED_STRIP_LEN 1
 
 static const char *TAG = "main";
@@ -38,7 +38,7 @@ void test(void *pvParameters) {
 		.type = LED_TYPE,
 		.is_rgbw = false,
 #ifdef LED_STRIP_BRIGHTNESS
-		.brightness = 255,
+		.brightness = 55,
 #endif
 		.length = CONFIG_LED_STRIP_LEN,
 		.gpio = LED_GPIO,
@@ -56,10 +56,10 @@ void test(void *pvParameters) {
 			ESP_LOGI(TAG, "CONNECTING");
 			c = 1; // blauw
 			break;
-            
-            case WPS_ACTIVE:
-            ESP_LOGI(TAG, "WPS_ACTIVE");
-            c = 3; // rood
+
+		case WPS_ACTIVE:
+			ESP_LOGI(TAG, "WPS_ACTIVE");
+			c = 3; // rood
 			break;
 
 		case SMARTCONFIG_ACTIVE:
@@ -105,7 +105,7 @@ extern "C" void app_main() {
 	ESP_ERROR_CHECK(init_spiffs());
 
 	err = loadSettings();
-  // strcpy ( wifiSettings.SSID, "kahjskljahs");  // test 
+	strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
 
 	wifiConnect();
 
