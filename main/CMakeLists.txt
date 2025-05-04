@@ -1,12 +1,14 @@
-# Embed the server root certificate into the final binary
-idf_build_get_property(project_dir PROJECT_DIR)
-set(COMPONENT_SRCDIRS ".")                                       
+#idf_component_register(
+#    SRCS led_strip.c
+#    INCLUDE_DIRS .
+#    REQUIRES driver log color esp_idf_lib_helpers
+#)
+set(COMPONENT_SRCDIRS ".")
 set(COMPONENT_ADD_INCLUDEDIRS "include")
-#set(COMPONENT_PRIV_REQUIRES "esp_driver_i2c ina226")
-#set(COMPONENT_PRIV_REQUIRES "arduino INA226 hd44780 klp")
-#set(COMPONENT_PRIV_REQUIRES  "main spiffs" "nvs_flash esp_event app_update esp_http_client esp_https_ota driver mbedtls esp_wifi wifiConnect spiffsOTA")
-#set(COMPONENT_PRIV_REQUIRES "klp")
+#set(COMPONENT_PRIV_REQUIRES driver log color esp_idf_lib_helpers)
+#set(COMPONENT_REQUIRES "driver" "log" "color" "esp_idf_lib_helpers")
+#set(COMPONENT_PRIV_REQUIRES  "klp"  "esp_adc" "spiffs" "nvs_flash" "gui" "lvgl" )
 #set(COMPONENT_EMBED_TXTFILES "${project_dir}/server_certs/ca_cert.pem")
 register_component()
-spiffs_create_partition_image(storage ../spiffs_image FLASH_IN_PROJECT)  // uncomment this line to create spiffs image
-                 
+spiffs_create_partition_image(storage ../spiffs_image FLASH_IN_PROJECT)
+#target_link_libraries(${COMPONENT_TARGET} "-u ld_include_highint_hdl_my")
