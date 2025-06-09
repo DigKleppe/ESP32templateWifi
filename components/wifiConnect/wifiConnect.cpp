@@ -470,6 +470,8 @@ void wifi_init_sta(void) {
 	if (DHCPoff)
 		setStaticIp((esp_netif_t *)s_sta_netif);
 
+	esp_netif_set_hostname(s_sta_netif, userSettings.moduleName);
+
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
