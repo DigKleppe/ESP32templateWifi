@@ -32,6 +32,14 @@ menu "Connection Configuration"
                 WiFi password (WPA or WPA2) for the example to use.
                 Can be left blank if the network has no security set.
 
+       config FIXED_LAST_IP_DIGIT 
+            int "last digit IP address"
+            range 0 250
+            default 0
+            help 
+                ip will be xx.xx.xx.pp xx from DHCP 
+                set to zero to disable
+
         config WPS_ENABLED
           bool "enable WPS"
           default y
@@ -80,6 +88,7 @@ menu "Connection Configuration"
                 help
                 Smartconfig timeout in seconds.
        endif # SMARTCONFIG_ENABLED
+                  
 
         choice EXAMPLE_WIFI_SCAN_METHOD
             prompt "WiFi Scan Method"
@@ -97,8 +106,6 @@ menu "Connection Configuration"
                 bool "All Channel"
         endchoice
     
-
-
         menu "WiFi Scan threshold"
             config EXAMPLE_WIFI_SCAN_RSSI_THRESHOLD
                 int "WiFi minimum rssi"

@@ -1,12 +1,5 @@
 
-/* WiFi station Example
 
- This example code is in the Public Domain (or CC0 licensed, at your option.)
-
- Unless required by applicable law or agreed to in writing, this
- software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- CONDITIONS OF ANY KIND, either express or implied.
- */
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -26,7 +19,9 @@
 
 #include "esp_smartconfig.h"
 #include "wifiConnect.h"
-
+#ifndef CONFIG_FIXED_LAST_IP_DIGIT
+#define CONFIG_FIXED_LAST_IP_DIGIT 99 // ip will be xx.xx.xx.pp    xx from DHCP  , <= 0 disables this
+#endif
 
 /*set wps mode via project configuration */
 #if CONFIG_EXAMPLE_WPS_TYPE_PBC
@@ -58,6 +53,7 @@ bool DHCPoff;
 bool IP6off;
 bool DNSoff;
 bool fileServerOff;
+bool fixedLastIPdigit = true;
 
 bool doStop;
 esp_netif_t *s_sta_netif = NULL;
@@ -83,7 +79,6 @@ wifiSettings_t wifiSettingsDefaults = {
  */
 
 #define EXAMPLE_ESP_MAXIMUM_RETRY 2
-#define EXAMPLE_H2E_IDENTIFIER ""
 #define CONFIG_ESP_WPA3_SAE_PWE_BOTH 1
 #define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
 #define CONFIG_ESP_WIFI_PW_ID ""
@@ -133,8 +128,7 @@ static const char *TAG = "wifiConnect";
 
 static void setStaticIp(esp_netif_t *netif) {
 	if (esp_netif_dhcpc_stop(netif) != ESP_OK) {
-		ESP_LOGE(TAG, "Failed to stop dhcp client");
-		return;
+	//	ESP_LOGE(TAG, "Failed to stop dhcp client");
 	}
 	esp_netif_ip_info_t ip;
 	memset(&ip, 0, sizeof(esp_netif_ip_info_t));
@@ -334,6 +328,9 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 		ESP_LOGI(TAG, "IP_EVENT %d", (int)event_id);
 		switch (event_id) {
 		case IP_EVENT_STA_GOT_IP: {
+			ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+			sprintf(myIpAddress, IPSTR, IP2STR(&event->ip_info.ip));
+
 #ifdef CONFIG_WPS_ENABLED
 
 			if (wpsTimer != NULL) {
@@ -353,11 +350,30 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 				}
 				wpsActive = false;
 			}
+
 #endif
-			xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
-			ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-			sprintf(myIpAddress, IPSTR, IP2STR(&event->ip_info.ip));
-			connectStatus = IP_RECEIVED;
+			if( CONFIG_FIXED_LAST_IP_DIGIT > 0) { // check if the last digit of IP address = CONFIG_FIXED_LAST_IP_DIGIT
+				uint32_t addr = event->ip_info.ip.addr;
+				
+				if ( (addr & 0xFF000000) == (CONFIG_FIXED_LAST_IP_DIGIT << 24) ) {  // last ip digit(LSB) is MSB in addr 
+					xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT); // ok
+					connectStatus = IP_RECEIVED;
+				}
+				else {
+					wifiSettings.ip4Address = (esp_ip4_addr_t)( (addr & 0x00FFFFFF) + (CONFIG_FIXED_LAST_IP_DIGIT << 24));
+					sprintf(myIpAddress, IPSTR, IP2STR(&wifiSettings.ip4Address));
+					saveSettings();
+					ESP_LOGI(TAG, "Set static IP to %s , reconnecting", (myIpAddress));
+					setStaticIp( s_sta_netif);
+					esp_wifi_disconnect();
+					esp_wifi_connect();
+				}
+			}
+
+			else {
+				xEventGroupSetBits(s_wifi_event_group, CONNECTED_BIT);
+				connectStatus = IP_RECEIVED;
+			}
 		}
 		break;
 		default:
