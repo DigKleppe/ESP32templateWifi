@@ -14,7 +14,7 @@
 esp_err_t init_spiffs(void);
 
 #define LED_TYPE LED_STRIP_WS2812
-#define LED_GPIO GPIO_NUM_48 // GPIO_NUM_8
+#define LED_GPIO GPIO_NUM_4//GPIO_NUM_48 
 #define CONFIG_LED_STRIP_LEN 1
 
 static const char *TAG = "main";
@@ -102,10 +102,14 @@ extern "C" void app_main() {
 	ESP_ERROR_CHECK(err);
 
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
-	ESP_ERROR_CHECK(init_spiffs());
+	err = init_spiffs();
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(err));
+		return;
+	}
 
 	err = loadSettings();
-	strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
+	//strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
 
 	wifiConnect();
 
