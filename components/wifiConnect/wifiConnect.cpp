@@ -1,6 +1,6 @@
 /*
 handles wifi connect process
-
+UNDer CONSTRUCTION
 */
 
 #include "esp_event.h"
@@ -25,6 +25,12 @@ handles wifi connect process
 #ifndef CONFIG_FIXED_LAST_IP_DIGIT
 #define CONFIG_FIXED_LAST_IP_DIGIT 99 // ip will be xx.xx.xx.pp    xx from DHCP  , <= 0 disables this
 #endif
+#ifndef CONFIG_PING_CHECKS
+#define CONFIG_PING_CHECKS 10 // if set to 0, ping will not be used to check connection
+#endif
+
+
+
 
 /*set wps mode via project configuration */
 #if CONFIG_EXAMPLE_WPS_TYPE_PBC
@@ -540,8 +546,71 @@ void wifi_stop(void) {
 	s_sta_netif = NULL;
 }
 
+
+/*
+
+#if (CONFIG_FIXED_LAST_IP_DIGIT > 0) // check if the last digit of IP address = CONFIG_FIXED_LAST_IP_DIGIT
+			uint32_t addr = event->ip_info.ip.addr;
+			if (!((addr & 0xFF000000) == (CONFIG_FIXED_LAST_IP_DIGIT << 24))) // last ip digit(LSB) is MSB in addr
+				addr = (addr & 0x00FFFFFF) + (CONFIG_FIXED_LAST_IP_DIGIT << 24);
+			wifiSettings.ip4Address = (esp_ip4_addr_t)addr;
+
+#if (CONFIG_PING_CHECKS > 0)
+			int retries = 0;
+			fixedIpIsFree = false;
+			uint8_t lastIPdigit = CONFIG_FIXED_LAST_IP_DIGIT;
+			do {
+				if (ping((esp_ip4_addr_t)addr) == PING_SUCCESS) { // then this address is already in use
+			 		ESP_LOGE(TAG, "This IP is alreayt in use, trying next one");
+			 		lastIPdigit++; //  = (esp_ip4_addr_t)( (wifiSettings.ip4Address.addr & 0x00FFFFFF) + 1);
+					addr = (addr & 0x00FFFFFF) + (lastIPdigit << 24);
+			 	} else {
+			 		fixedIpIsFree = true;
+			 	}
+			 } while (!fixedIpIsFree && (retries++ < CONFIG_PING_CHECKS));
+			 if (!fixedIpIsFree) {
+			 	ESP_LOGE(TAG, "Failed to find free IP address after %d retries, further with DHCP address", retries);
+			} else
+				wifiSettings.ip4Address = (esp_ip4_addr_t)addr;
+
+#endif // (CONFIG_PING_CHECKS > 0)
+			sprintf(myIpAddress, IPSTR, IP2STR(&wifiSettings.ip4Address));
+			if (fixedIpIsFree) {
+				saveSettings();
+				ESP_LOGI(TAG, "Set static IP to %s , reconnecting", (myIpAddress));
+				setStaticIp(s_sta_netif);
+				esp_wifi_disconnect();
+				esp_wifi_connect();
+			} // else go on with DHCP address
+
+#endif // (CONFIG_FIXED_LAST_IP_DIGIT > 0)
+
+*/
+
+
+void wifiConnectTask (void *pvParameters) {
+	int step = 0;
+
+	switch (step) {
+		case 0:  // wait 
+
+
+
+
+	}
+
+
+
+
+}
+
+
+
 void wifiConnect(void) {
 	wifi_init_sta();
+	xTaskCreate(wifiConnectTask, "wifiConnectTask", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+
+
 //	g_pCGIs = CGIurls; // for file_server to read CGIurls
 }
 
