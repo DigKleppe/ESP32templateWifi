@@ -65,6 +65,8 @@ volatile connectStatus_t connectStatus;
 static void setStaticIp(esp_netif_t *netif);
 esp_err_t saveSettings(void);
 
+//7e2fd3b309c0d9ce5bb70700d0f6e61542ad5f9902a2920572e21a31c3d018d5
+
 #define EXAMPLE_ESP_WIFI_SSID "xxx"
 #define EXAMPLE_ESP_WIFI_PASS "yyy"
 
@@ -175,14 +177,6 @@ void wpsTimerCallback(TimerHandle_t xTimer) {
 	ESP_LOGI(TAG, "WPS Timeout");
 	if (connectStatus == WPS_ACTIVE)
 		connectStatus = WPS_TIMEOUT;
-
-	// ESP_ERROR_CHECK(esp_wifi_wps_disable());
-
-	// connectStatus = CONNECTING;
-	// s_retry_num = 0;
-	// esp_wifi_connect();
-	// xTimerDelete(wpsTimer, 0);
-	// wpsTimer = NULL;
 }
 // for timeout, without this timer the timeout is 120s
 void startWpsTimer(void) {

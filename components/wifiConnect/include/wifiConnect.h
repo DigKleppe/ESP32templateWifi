@@ -24,7 +24,7 @@ extern "C" {
 
 typedef struct {
 	char SSID[33];
-	char pwd[64];
+	char pwd[70];
 	esp_ip4_addr_t ip4Address;
 	esp_ip4_addr_t gw;
 	char upgradeURL[64];
