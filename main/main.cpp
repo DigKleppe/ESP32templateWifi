@@ -113,7 +113,7 @@ extern "C" void app_main() {
 	}
 
 	err = loadSettings();
-	//	strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
+	strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
 
 	wifiConnect();
 

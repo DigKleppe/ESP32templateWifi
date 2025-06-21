@@ -20,6 +20,7 @@ handles wifi connect process
 #include "mdns.h"
 #include "settings.h"
 
+
 #include "esp_smartconfig.h"
 #include "wifiConnect.h"
 #ifndef CONFIG_FIXED_LAST_IP_DIGIT
@@ -50,6 +51,7 @@ static int s_ap_creds_num = 0;
 static int s_retry_num = 0;
 void initialiseMdns(char *hostName);
 esp_err_t start_file_server(const char *base_path);
+extern const tCGI CGIurls[];
 
 char myIpAddress[16];
 bool DHCPoff;
@@ -65,7 +67,6 @@ volatile connectStatus_t connectStatus;
 static void setStaticIp(esp_netif_t *netif);
 esp_err_t saveSettings(void);
 
-//7e2fd3b309c0d9ce5bb70700d0f6e61542ad5f9902a2920572e21a31c3d018d5
 
 #define EXAMPLE_ESP_WIFI_SSID "xxx"
 #define EXAMPLE_ESP_WIFI_PASS "yyy"
@@ -75,7 +76,7 @@ wifiSettings_t wifiSettings;
 // CONFIG_EXAMPLE_WIFI_PASSWORD,ipaddr_addr(DEFAULT_IPADDRESS),ipaddr_addr(DEFAULT_GW),CONFIG_DEFAULT_FIRMWARE_UPGRADE_URL,CONFIG_FIRMWARE_UPGRADE_FILENAME,false
 // };
 wifiSettings_t wifiSettingsDefaults = {
-	CONFIG_EXAMPLE_WIFI_SSID, CONFIG_EXAMPLE_WIFI_PASSWORD, ipaddr_addr(DEFAULT_IPADDRESS), ipaddr_addr(DEFAULT_GW), " ", " ", false};
+	CONFIG_EXAMPLE_WIFI_SSID, CONFIG_EXAMPLE_WIFI_PASSWORD, ipaddr_addr(DEFAULT_IPADDRESS), ipaddr_addr(DEFAULT_GW), " ", " ", " ", "0.0", false};
 
 /* The examples use WiFi configuration that you can set via project configuration menu
 
@@ -234,8 +235,10 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 			if (s_retry_num < MAX_RETRY_ATTEMPTS) {
 				esp_wifi_connect();
 				s_retry_num++;
-			} else
+			} else {
 				connectStatus = CONNECT_TIMEOUT;
+				s_retry_num = 0;
+			}
 			break;
 #ifdef CONFIG_SMARTCONFIG_ENABLED
 			xTaskCreate(smartconfigTask, "smartconfig_task", 4096, NULL, 3, NULL);
@@ -422,7 +425,6 @@ void wifi_init_sta(void) {
 	ESP_ERROR_CHECK(esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
 #endif
 	wifi_config_t wifi_config = {0};
-
 	wifi_config.sta.threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD;
 	wifi_config.sta.sae_pwe_h2e = ESP_WIFI_SAE_MODE;
 	strcpy((char *)wifi_config.sta.sae_h2e_identifier, EXAMPLE_H2E_IDENTIFIER);
@@ -433,7 +435,6 @@ void wifi_init_sta(void) {
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
 	ESP_ERROR_CHECK(esp_wifi_start());
-
 	ESP_LOGI(TAG, "wifi_init_sta finished.");
 }
 
@@ -464,11 +465,13 @@ void connectTask(void *pvParameters) {
 		case 0:
 			ESP_LOGI(TAG, "Connecting to: %s pw:%s", wifiSettings.SSID, wifiSettings.pwd);
 			wifi_init_sta();
+			ESP_ERROR_CHECK(start_file_server("/spiffs"));
 			step++;
 			break;
 		case 1:
 			switch (connectStatus) {
-				case CONNECTED:
+			case CONNECTED:
+			case IP_RECEIVED:
 				step = 20;
 				break;
 			case CONNECT_TIMEOUT:
@@ -514,7 +517,6 @@ void connectTask(void *pvParameters) {
 				connectStatus = CONNECTING;
 				step = 1;
 			}
-
 			break;
 
 			default:
@@ -527,7 +529,7 @@ void connectTask(void *pvParameters) {
 			case IP_RECEIVED:
 				if (!DNSoff)
 					initialiseMdns(userSettings.moduleName);
-				ESP_ERROR_CHECK(start_file_server("/spiffs"));
+
 				step = 30;
 				break;
 			default:
@@ -536,6 +538,8 @@ void connectTask(void *pvParameters) {
 			break;
 
 		case 30:
+			if ( connectStatus != IP_RECEIVED)
+				step = 1;
 			break;
 
 		default:
@@ -547,8 +551,6 @@ void connectTask(void *pvParameters) {
 }
 
 void wifiConnect(void) {
-
 	xTaskCreate(connectTask, "connectTask", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
-	//	wifi_init_sta();
-	//	g_pCGIs = CGIurls; // for file_server to read CGIurls
+	g_pCGIs = CGIurls; // for file_server to read CGIurls
 }
