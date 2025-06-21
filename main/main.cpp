@@ -14,7 +14,7 @@
 esp_err_t init_spiffs(void);
 
 #define LED_TYPE LED_STRIP_WS2812
-#define LED_GPIO GPIO_NUM_4//GPIO_NUM_48 
+#define LED_GPIO GPIO_NUM_4 // GPIO_NUM_48
 #define CONFIG_LED_STRIP_LEN 1
 
 static const char *TAG = "main";
@@ -33,7 +33,9 @@ static const rgb_t colors[] = {
 
 #define COLORS_TOTAL (sizeof(colors) / sizeof(rgb_t))
 
-void test(void *pvParameters) {
+void LEDtask(void *pvParameters) {
+	bool flash = false;
+
 	led_strip_t strip = {
 		.type = LED_TYPE,
 		.is_rgbw = false,
@@ -45,29 +47,26 @@ void test(void *pvParameters) {
 		.channel = RMT_CHANNEL_0,
 		.buf = NULL,
 	};
-
+	led_strip_install();
 	ESP_ERROR_CHECK(led_strip_init(&strip));
 
 	int c = 0;
 	while (1) {
 		switch ((int)connectStatus) {
-
 		case CONNECTING:
 			ESP_LOGI(TAG, "CONNECTING");
-			c = 1; // blauw
+			c = 4;
 			break;
 
 		case WPS_ACTIVE:
 			ESP_LOGI(TAG, "WPS_ACTIVE");
-			c = 3; // rood
+			flash = true;
+			c = 1; // blauw
 			break;
 
-		case SMARTCONFIG_ACTIVE:
-			ESP_LOGI(TAG, "SMARTCONFIG");
-			c = 3; // rood
-			break;
 		case IP_RECEIVED:
 			//     ESP_LOGI(TAG, "IP_RECEIVED");
+			flash = false;
 			c = 2; // groen
 			break;
 
@@ -80,15 +79,20 @@ void test(void *pvParameters) {
 			ESP_LOGI(TAG, "default");
 			break;
 		}
+	
+	led_strip_fill(&strip, 0, strip.length, colors[c]);
+	led_strip_flush(&strip);
 
-		ESP_ERROR_CHECK(led_strip_fill(&strip, 0, strip.length, colors[c]));
-		ESP_ERROR_CHECK(led_strip_flush(&strip));
-
+	if (flash) {
+		vTaskDelay(pdMS_TO_TICKS(300));
+		led_strip_fill(&strip, 0, strip.length, colors[7]);
+		led_strip_flush(&strip);
+		vTaskDelay(pdMS_TO_TICKS(300));
+	} else
 		vTaskDelay(pdMS_TO_TICKS(1000));
-
-		// if (++c >= COLORS_TOTAL)
-		//     c = 0;
 	}
+	// if (++c >= COLORS_TOTAL)
+	//     c = 0;
 }
 
 extern "C" void app_main() {
@@ -109,10 +113,10 @@ extern "C" void app_main() {
 	}
 
 	err = loadSettings();
-	//strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
+	//	strcpy ( wifiSettings.SSID, "kahjskljahs");  // test
 
 	wifiConnect();
 
-	led_strip_install();
-	xTaskCreate(test, "test", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
+
+	xTaskCreate(LEDtask, "LEDtask", configMINIMAL_STACK_SIZE * 5, NULL, 5, NULL);
 }

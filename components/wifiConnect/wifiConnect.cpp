@@ -281,13 +281,6 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 		case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
 			connectStatus = WPS_TIMEOUT;
 			ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_TIMEOUT");
-			// ESP_ERROR_CHECK(esp_wifi_wps_disable());
-			// s_retry_num = 0;
-			// esp_wifi_connect();
-			// if (wpsTimer != NULL) {
-			// 	xTimerDelete(wpsTimer, 0);
-			// 	wpsTimer = NULL;
-			// }
 			break;
 		case WIFI_EVENT_STA_WPS_ER_PIN: {
 			ESP_LOGI(TAG, "WIFI_EVENT_STA_WPS_ER_PIN");
@@ -428,7 +421,7 @@ void wifi_init_sta(void) {
 #ifdef CONFIG_SMARTCONFIG_ENABLED
 	ESP_ERROR_CHECK(esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
 #endif
-	wifi_config_t wifi_config;
+	wifi_config_t wifi_config = {0};
 
 	wifi_config.sta.threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD;
 	wifi_config.sta.sae_pwe_h2e = ESP_WIFI_SAE_MODE;
@@ -475,7 +468,7 @@ void connectTask(void *pvParameters) {
 			break;
 		case 1:
 			switch (connectStatus) {
-			case CONNECTED:
+				case CONNECTED:
 				step = 20;
 				break;
 			case CONNECT_TIMEOUT:
@@ -483,7 +476,6 @@ void connectTask(void *pvParameters) {
 				step++;
 				connectStatus = WPS_ACTIVE;
 				ESP_LOGI(TAG, "WPS Active");
-				//	ESP_ERROR_CHECK(esp_wifi_wps_disable());
 				ESP_ERROR_CHECK(esp_wifi_wps_enable(&wpsConfig));
 				ESP_ERROR_CHECK(esp_wifi_wps_start(0));
 				wpsActive = true;
@@ -492,6 +484,7 @@ void connectTask(void *pvParameters) {
 			default:
 				break;
 			};
+			break;
 		case 2: // get results from WPS
 			switch (connectStatus) {
 			case WPS_SUCCESS: {
