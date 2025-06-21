@@ -8,12 +8,12 @@
 #ifndef WIFI_CONNECT_H_
 #define WIFI_CONNECT_H_
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_wifi.h"
-#include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_netif.h"
+#include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "sdkconfig.h"
 #if CONFIG_EXAMPLE_CONNECT_ETHERNET
 #include "esp_eth.h"
 #endif
@@ -21,7 +21,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 typedef struct {
 	char SSID[33];
@@ -31,26 +30,35 @@ typedef struct {
 	char upgradeURL[64];
 	char upgradeFileName[32];
 	bool updated;
-}wifiSettings_t;
+} wifiSettings_t;
 
 extern wifiSettings_t wifiSettings;
 extern wifiSettings_t wifiSettingsDefaults;
 extern char myIpAddress[];
 
 #define STATIC_NETMASK_ADDR "255.255.255.0"
-#define DEFAULT_IPADDRESS 	"192.168.2.50"
-#define DEFAULT_GW		 	"192.168.2.255"
+#define DEFAULT_IPADDRESS "192.168.2.50"
+#define DEFAULT_GW "192.168.2.255"
 
 extern bool DHCPoff;
 extern bool DNSoff;
 extern bool fileServerOff;
 
-typedef enum { CONNECTING, CONNECTED, SMARTCONFIG_ACTIVE, WPS_ACTIVE, IP_RECEIVED} connectStatus_t;
+typedef enum {
+	CONNECTING,
+	CONNECT_TIMEOUT,
+	CONNECTED,
+	SMARTCONFIG_ACTIVE,
+	WPS_ACTIVE,
+	WPS_SUCCESS,
+	WPS_FAILED,
+	WPS_TIMEOUT,
+	IP_RECEIVED
+} connectStatus_t;
 
-extern volatile  connectStatus_t connectStatus;
+extern volatile connectStatus_t connectStatus;
 
-void wifiConnect (void);
-
+void wifiConnect(void);
 
 /* Common functions for protocol examples, to establish Wi-Fi or Ethernet connection.
 
@@ -62,8 +70,6 @@ void wifiConnect (void);
  */
 
 // protocol examples common.h
-
-
 
 #if !CONFIG_IDF_TARGET_LINUX
 #if CONFIG_EXAMPLE_CONNECT_WIFI
@@ -98,7 +104,7 @@ void wifiConnect (void);
  *
  * @return ESP_OK on successful connection
  */
-//esp_err_t connect(void);
+// esp_err_t connect(void);
 
 /**
  * Counterpart to connect, de-initializes Wi-Fi or Ethernet
@@ -143,10 +149,10 @@ esp_eth_handle_t get_eth_handle(void);
 #endif // CONFIG_EXAMPLE_CONNECT_ETHERNET
 
 #else
-static inline esp_err_t connect(void) {return ESP_OK;}
+static inline esp_err_t connect(void) { return ESP_OK; }
 #endif // !CONFIG_IDF_TARGET_LINUX
 
-#define CONFIG_EXAMPLE_WIFI_CONN_MAX_RETRY 	10
+#define CONFIG_EXAMPLE_WIFI_CONN_MAX_RETRY 10
 
 #if CONFIG_EXAMPLE_CONNECT_IPV6
 #define MAX_IP6_ADDRS_PER_NETIF (5)
@@ -163,7 +169,6 @@ static inline esp_err_t connect(void) {return ESP_OK;}
 
 #endif
 
-
 #if CONFIG_EXAMPLE_CONNECT_IPV6
 extern const char *ipv6_addr_types_to_str[6];
 #endif
@@ -178,7 +183,6 @@ void wifi_shutdown(void);
 esp_err_t wifi_connect(void);
 void ethernet_shutdown(void);
 esp_err_t ethernet_connect(void);
-
 
 #ifdef __cplusplus
 }
